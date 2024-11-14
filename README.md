@@ -19,7 +19,7 @@ Comando     Ação
 01 xx       Apagar xx-esimo led vermelho.  
 10          Animação com os leds vermelhos dada pelo estado da chave SW0: se para baixo, a animação 
             ocorre da esquerda para direita; se para cima, da direita para esquerda. A animação consiste em  
-            acender um led vermelho por 200ms, apaga-lo e ent  ́ ao acender seu vizinho, dependendo do estado  
+            acender um led vermelho por 200ms, apaga-lo e então acender seu vizinho, dependendo do estado  
             da chave SW0. Este processo deve ser continuado repetidamente para todos os leds vermelhos.
 11          Parar animação dos leds.  
 20          Inicia cronometro de segundos, utilizando 4 displays de 7 segmentos. Adicionalmente, o botão
