@@ -1,4 +1,24 @@
 .org 0x20
+# PROLOGO Stack Frame
+    addi sp, sp, -68
+    stw  ra, 64(sp)
+    stw  r20, 60(sp)
+    stw  r5, 56(sp)
+    stw  r6, 52(sp)
+    stw  r7, 48(sp)
+    stw  r8, 44(sp)
+    stw  r9, 40(sp)
+    stw  r10, 36(sp)
+    stw  r11, 32(sp)
+    stw  r12, 28(sp)
+    stw  r13, 24(sp)
+    stw  r14, 20(sp)
+    stw  r15, 16(sp)
+    stw  r16, 12(sp)
+    stw  r17, 8(sp)
+    stw  r18, 4(sp)
+    stw  r19, 0(sp)
+
 /*Exception Handler*/
     rdctl   et,ipending                             /*Checa se interrupcao externa ocorreu*/
     beq     et,r0,OTHER_EXCEPTIONS                  /*SE zero, checa interrupcoes*/
@@ -14,26 +34,90 @@ OTHER_INTERRUPTS:
 OTHER_EXCEPTIONS:
 /*Instrucoes que checam outros tipos de interrupcoes aqui*/
 END_HANDLER:
+# EPILOGO Stack Frame
+    ldw  ra, 64(sp)
+    ldw  r20, 60(sp)
+    ldw  r5, 56(sp)
+    ldw  r6, 52(sp)
+    ldw  r7, 48(sp)
+    ldw  r8, 44(sp)
+    ldw  r9, 40(sp)
+    ldw  r10, 36(sp)
+    ldw  r11, 32(sp)
+    ldw  r12, 28(sp)
+    ldw  r13, 24(sp)
+    ldw  r14, 20(sp)
+    ldw  r15, 16(sp)
+    ldw  r16, 12(sp)
+    ldw  r17, 8(sp)
+    ldw  r18, 4(sp)
+    ldw  r19, 0(sp)
+    addi sp, sp, 68
+
     eret                                            /*Retorno para _start*/
 .org    0x110
 /*Rotina da interrupcao desejada*/
 EXT_IRQ0:
-   
+# PROLOGO Stack Frame
+    addi sp, sp, -68
+    stw  ra, 64(sp)
+    stw  r20, 60(sp)
+    stw  r5, 56(sp)
+    stw  r6, 52(sp)
+    stw  r7, 48(sp)
+    stw  r8, 44(sp)
+    stw  r9, 40(sp)
+    stw  r10, 36(sp)
+    stw  r11, 32(sp)
+    stw  r12, 28(sp)
+    stw  r13, 24(sp)
+    stw  r14, 20(sp)
+    stw  r15, 16(sp)
+    stw  r16, 12(sp)
+    stw  r17, 8(sp)
+    stw  r18, 4(sp)
+    stw  r19, 0(sp)
+# Tratamento da flag para animacao
+    movia   r6, FLAG_ANIMA
     ldw     r19, 0(r6)
-    beq     r19, r0, POLL_WRITE  /*SE flag for 0, volta a esrita em tela*/
-    
-    movia   r19, 0x10000000
-    movia   r20, 0xffff
-    stwio   r20, 0(r19)
+    beq     r19, r0, RET  /*SE flag for 0, volta a esrita em tela*/
+    call    TRATA_ANIMA
 
-    movia   r9, 0x10002000
+
+
+# EPILOGO Stack Frame
+    ldw  ra, 64(sp)
+    ldw  r20, 60(sp)
+    ldw  r5, 56(sp)
+    ldw  r6, 52(sp)
+    ldw  r7, 48(sp)
+    ldw  r8, 44(sp)
+    ldw  r9, 40(sp)
+    ldw  r10, 36(sp)
+    ldw  r11, 32(sp)
+    ldw  r12, 28(sp)
+    ldw  r13, 24(sp)
+    ldw  r14, 20(sp)
+    ldw  r15, 16(sp)
+    ldw  r16, 12(sp)
+    ldw  r17, 8(sp)
+    ldw  r18, 4(sp)
+    ldw  r19, 0(sp)
+    addi sp, sp, 68
+RET:
+    movia   r9, 0x10002000      /*zera o temporizador*/
     stwio   r0, 0(r9)
     ret                         /*Retorno para _start*/
+
+
 
 
 .global _start
 _start:
 /*TEMPORIZADOR*/
+
+    movia   sp, 0x10000
+
     movia   r8, 25000000
     movia   r9, 0x10002000
 
@@ -97,20 +181,33 @@ LEDS:
     call TRATA_LED          /*Sub-rotina para acender e apagar LEDs*/
     br   PROMPT_LOOP        /*Prompt do menu para prox comando*/
 ANIMA:
-    /*Coloca o valor da flag da animacao para 1*/ 
+/*Tratamento do comando da animacao*/
+    ldw     r14, 4(r10)
+    subi    r14, r14, 0x30
+    beq     r14, r0, ATIVA_FLAG_ANIMA /*Se comando for 10 ativa a animacao*/
+    movia   r6, FLAG_ANIMA
+    stw     r0, 0(r6) /*pausa a animacao*/
+    br      FIM_ANIMA
+/*Coloca o valor da flag da animacao para 1*/
+ATIVA_FLAG_ANIMA:
     movi  r14, 0x1
     movia r6,  FLAG_ANIMA
     stw   r14, 0(r6)
+FIM_ANIMA:
     br    PROMPT_LOOP   /*Prompt do menu para prox comando*/
 
 .org 0x500
+
 /*prompt do menu*/
 PROMPT:
 .ascii "Entre com o comando: "
 .org 0x520
+
 /*buffer da entrada do teclado*/
 BUFFER:
 .skip 100
 /*flag para checar se houve comando para animcao*/
 FLAG_ANIMA:     
 .skip 10
+
+
