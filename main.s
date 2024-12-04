@@ -2,7 +2,6 @@
 # PROLOGO Stack Frame
     addi sp, sp, -68
     stw  ra, 64(sp)
-    stw  r20, 60(sp)
     stw  r5, 56(sp)
     stw  r6, 52(sp)
     stw  r7, 48(sp)
@@ -36,7 +35,6 @@ OTHER_EXCEPTIONS:
 END_HANDLER:
 # EPILOGO Stack Frame
     ldw  ra, 64(sp)
-    ldw  r20, 60(sp)
     ldw  r5, 56(sp)
     ldw  r6, 52(sp)
     ldw  r7, 48(sp)
@@ -61,7 +59,6 @@ EXT_IRQ0:
 # PROLOGO Stack Frame
     addi sp, sp, -68
     stw  ra, 64(sp)
-    stw  r20, 60(sp)
     stw  r5, 56(sp)
     stw  r6, 52(sp)
     stw  r7, 48(sp)
@@ -77,17 +74,27 @@ EXT_IRQ0:
     stw  r17, 8(sp)
     stw  r18, 4(sp)
     stw  r19, 0(sp)
-# Tratamento da flag para animacao
+# Tratamento da flag para cronometro
+    movia   r6, FLAG_CRONO
+    ldw     r19, 0(r6)
+    beq     r19, r0, LABEL  /*comando: se nao cronometro, testa se animacao*/
+    movi    r6, 2
+    addi    r22, r22, 1     /*contador de segundos = TEMPORIZADOR * 4*/
+    beq     r22, r6, CALL_CRONO 
+    br      RET
+CALL_CRONO:
+    mov     r22, r0
+    movi    r14, 11
+    call    CRONO   
+# Tratamento da flag para animacao     
+LABEL:
     movia   r6, FLAG_ANIMA
     ldw     r19, 0(r6)
     beq     r19, r0, RET  /*SE flag for 0, volta a esrita em tela*/
     call    TRATA_ANIMA
-
-
-
+RET:
 # EPILOGO Stack Frame
     ldw  ra, 64(sp)
-    ldw  r20, 60(sp)
     ldw  r5, 56(sp)
     ldw  r6, 52(sp)
     ldw  r7, 48(sp)
@@ -104,7 +111,7 @@ EXT_IRQ0:
     ldw  r18, 4(sp)
     ldw  r19, 0(sp)
     addi sp, sp, 68
-RET:
+
     movia   r9, 0x10002000      /*zera o temporizador*/
     stwio   r0, 0(r9)
     ret                         /*Retorno para _start*/
@@ -114,6 +121,14 @@ RET:
 
 .global _start
 _start:
+/*Contadores e apontadores da tabela p/ o cronometro*/
+    movia   r21, TABELA_7SEG
+    movia   r20, TABELA_7SEG
+    mov     r23, r0
+    mov     r3, r0
+    mov     r4, r0
+/*Contador*/
+    mov     r22, r0 
 /*TEMPORIZADOR*/
 
     movia   sp, 0x10000
@@ -175,6 +190,8 @@ TRATA:
     subi    r14,r14,0x30    /*converte codigo ASCII para formatacao do menu*/
     movi    r5, 0x1
     beq     r14,r5,ANIMA    /*Animacao de LEDs*/
+    movi    r5, 0x2
+    beq     r14,r5,TRATA_CRONO 
     beq     r14,r0,LEDS     /*Acende e apaga LEDs*/
     br      PROMPT_LOOP
 LEDS:
@@ -195,6 +212,20 @@ ATIVA_FLAG_ANIMA:
     stw   r14, 0(r6)
 FIM_ANIMA:
     br    PROMPT_LOOP   /*Prompt do menu para prox comando*/
+TRATA_CRONO:
+    /*Tratamento do comando do cronometro*/
+    ldw     r14, 4(r10)
+    subi    r14, r14, 0x30
+    beq     r14, r0, ATIVA_FLAG_CRONO /*Se comando for 20 ativa o cronometro*/
+    movia   r6, FLAG_CRONO
+    stw     r0, 0(r6) /*cancela o cronometro*/
+    br      FIM_ANIMA
+/*Coloca o valor da flag do cronometro para 1*/
+ATIVA_FLAG_CRONO:
+    movi  r14, 0x1
+    movia r6,  FLAG_CRONO
+    stw   r14, 0(r6)
+    br    FIM_ANIMA
 
 .org 0x500
 
@@ -209,5 +240,9 @@ BUFFER:
 /*flag para checar se houve comando para animcao*/
 FLAG_ANIMA:     
 .skip 10
-
+FLAG_CRONO:
+.skip 10
+.global TABELA_7SEG
+TABELA_7SEG:
+.byte   0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
 
