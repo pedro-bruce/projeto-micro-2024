@@ -4,7 +4,6 @@
     stw  ra, 64(sp)
     stw  r5, 56(sp)
     stw  r6, 52(sp)
-    stw  r7, 48(sp)
     stw  r8, 44(sp)
     stw  r9, 40(sp)
     stw  r10, 36(sp)
@@ -37,7 +36,6 @@ END_HANDLER:
     ldw  ra, 64(sp)
     ldw  r5, 56(sp)
     ldw  r6, 52(sp)
-    ldw  r7, 48(sp)
     ldw  r8, 44(sp)
     ldw  r9, 40(sp)
     ldw  r10, 36(sp)
@@ -61,7 +59,6 @@ EXT_IRQ0:
     stw  ra, 64(sp)
     stw  r5, 56(sp)
     stw  r6, 52(sp)
-    stw  r7, 48(sp)
     stw  r8, 44(sp)
     stw  r9, 40(sp)
     stw  r10, 36(sp)
@@ -78,14 +75,46 @@ EXT_IRQ0:
     movia   r6, FLAG_CRONO
     ldw     r19, 0(r6)
     beq     r19, r0, LABEL  /*comando: se nao cronometro, testa se animacao*/
+
     movi    r6, 2
     addi    r22, r22, 1     /*contador de segundos = TEMPORIZADOR * 4*/
-    beq     r22, r6, CALL_CRONO 
-    br      RET
+    beq     r22, r6,CALL_CRONO 
+    br      LABEL
 CALL_CRONO:
     mov     r22, r0
     movi    r14, 11
-    call    CRONO   
+    movi    r15, 10
+ 
+
+    movia   r11, 0x1000005c     /*edge bits do pushbutton*/
+    ldwio   r8, (r11)
+    andi    r8, r8, 4
+    bne     r8, r0, PAUSA_CRONO /*se botao foi apertado, checar flag de pausa*/
+
+    movia   r9, FLAG_PAUSA      /*flag para pausa do cronometro*/
+    ldb     r12, (r9)
+    bne     r12, r0, LABEL      /*se flag esta ativa, mantem pausado*/
+
+    call    CRONO  
+    br      LABEL 
+PAUSA_CRONO:
+    movia   r9, FLAG_PAUSA
+    ldb     r12, (r9)
+    movi    r10, 0x1
+    beq     r12, r10, DESPAUSA  /*se a flag esta ativa, despausar cronometro*/
+    
+    movia   r11, 0x1000005c     /*edge bits do pushbutton*/
+    stwio   r0, (r11)
+    movia   r9, FLAG_PAUSA
+    movi    r10, 0x1
+    stb     r10, (r9)           /*pausa o cronometro*/
+    br      LABEL
+DESPAUSA:
+    movia   r9, FLAG_PAUSA
+    stb     r0, (r9)            /*despausa o cronometro*/
+    movia   r11, 0x1000005c     /*edge bits do pushbutton*/
+    stw     r0, (r11)
+    br      CALL_CRONO
 # Tratamento da flag para animacao     
 LABEL:
     movia   r6, FLAG_ANIMA
@@ -97,7 +126,6 @@ RET:
     ldw  ra, 64(sp)
     ldw  r5, 56(sp)
     ldw  r6, 52(sp)
-    ldw  r7, 48(sp)
     ldw  r8, 44(sp)
     ldw  r9, 40(sp)
     ldw  r10, 36(sp)
@@ -122,12 +150,19 @@ RET:
 .global _start
 _start:
 /*Contadores e apontadores da tabela p/ o cronometro*/
-    movia   r21, TABELA_7SEG
-    movia   r20, TABELA_7SEG
+PREP_CRONO:
+    /*para segundos*/
+    movia   r21, TABELA_7SEG    
+    /*para dezenas*/
+    movia   r20, TABELA_7SEG    
     mov     r23, r0
+    /*para centenas*/
+    movia   r2, TABELA_7SEG
     mov     r3, r0
+    /*para milhares*/
+    movia   r7, TABELA_7SEG
     mov     r4, r0
-/*Contador*/
+/*Contador de segundos | TEMPORIZADOR * 4*/
     mov     r22, r0 
 /*TEMPORIZADOR*/
 
@@ -218,8 +253,10 @@ TRATA_CRONO:
     subi    r14, r14, 0x30
     beq     r14, r0, ATIVA_FLAG_CRONO /*Se comando for 20 ativa o cronometro*/
     movia   r6, FLAG_CRONO
-    stw     r0, 0(r6) /*cancela o cronometro*/
-    br      FIM_ANIMA
+    stw     r0, 0(r6) /*desativa a flag do cronometro*/
+    movia   r6, 0x10000020
+    stw     r0, (r6)  /*cancela o cronometro*/
+    br      PREP_CRONO
 /*Coloca o valor da flag do cronometro para 1*/
 ATIVA_FLAG_CRONO:
     movi  r14, 0x1
@@ -242,7 +279,9 @@ FLAG_ANIMA:
 .skip 10
 FLAG_CRONO:
 .skip 10
+FLAG_PAUSA:
+.skip 10
 .global TABELA_7SEG
 TABELA_7SEG:
-.byte   0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
+.byte   0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x0
 
