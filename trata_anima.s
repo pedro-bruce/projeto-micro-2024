@@ -1,7 +1,7 @@
 .global TRATA_ANIMA
 TRATA_ANIMA:
-    movia   r7, 0x10000040 
-    ldwio   r8, 0(r7)
+    movia   r9, 0x10000040 
+    ldwio   r8, 0(r9)
     beq     r8, r0, ANIME_REV
     br      ANIME
 ANIME_REV:
